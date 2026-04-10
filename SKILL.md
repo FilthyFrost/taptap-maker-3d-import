@@ -8,63 +8,75 @@
 
 ## 意图识别决策树
 
-收到用户的 3D 模型导入请求后，按以下规则判断：
+**核心原则：先判断用途（需要动画吗？），再看格式。格式不决定用途。**
+
+FBX 也可以是角色动画，GLB 也可以是静态家具。不要按格式分流。
 
 ```
-用户给了什么文件/描述了什么需求？
+第 1 步：判断用途 — 这个模型需要动吗？
 │
-├─ 文件是 .fbx 格式
-│  └─ → 读取 skill-scene-fbx.md（FBX 场景素材）
+├─ 需要动画（角色/人物/NPC/怪物/宠物会动的）
+│  │
+│  │  关键词：角色、人物、NPC、怪物、玩家、动画、
+│  │         Idle、Walk、Run、Attack、状态机、
+│  │         Meshy AI、Mixamo、骨骼动画
+│  │
+│  └─ → 读取 skill-animated-character.md
+│       （不管文件是 .glb 还是 .fbx，都走这条路）
 │
-├─ 文件是 .glb 或 .gltf 格式
+├─ 不需要动画（静态物件/场景道具）
 │  │
-│  ├─ 用户说"角色""人物""NPC""怪物"或要播放动画（Idle/Walk/Run/Attack）
-│  │  └─ → 读取 skill-animated-character.md（骨骼动画角色）
+│  │  关键词：雕像、摆件、道具、装饰、花瓶、
+│  │         家具、沙发、桌子、椅子、建筑、
+│  │         地板、门、窗、墙、场景、房间
 │  │
-│  ├─ 用户说"雕像""摆件""道具""装饰""宠物（不动的）"
-│  │  └─ → 读取 skill-static-prop.md（静态物件）
-│  │
-│  ├─ 用户没说清楚 → 检查 GLB 文件内容：
-│  │  ├─ 文件包含 skin + animation 数据 → skill-animated-character.md
-│  │  └─ 文件只有 mesh 数据 → skill-static-prop.md
-│  │
-│  └─ 用户说"场景""家具""建筑""房间"
-│     └─ → 读取 skill-static-prop.md
+│  └─ 第 2 步：看文件格式
+│     │
+│     ├─ .fbx 文件 → 读取 skill-scene-fbx.md
+│     │  （FBX 可以直接加载，最简单）
+│     │
+│     └─ .glb / .gltf 文件 → 读取 skill-static-prop.md
+│        （GLB 需要转换为 MDL 或用 CustomGeometry）
 │
-├─ 用户只描述了意图，没给文件
-│  ├─ "我要加载一个会动的角色" → skill-animated-character.md
-│  ├─ "我要放一个雕像/道具" → skill-static-prop.md
-│  ├─ "我要搭建场景/放家具" → skill-scene-fbx.md
-│  └─ "模型出问题了/不显示/碎裂" → skill-troubleshooting.md
+├─ 用户没说清楚用途
+│  │
+│  └─ 检查文件内容判断：
+│     ├─ 文件包含 skin（骨骼）+ animation 数据 → skill-animated-character.md
+│     ├─ 文件只有 mesh 数据，无骨骼 → skill-static-prop.md 或 skill-scene-fbx.md
+│     └─ 仍不确定 → 问用户："这个模型需要播放动画吗？"
 │
-└─ 遇到任何问题
-   └─ → 读取 skill-troubleshooting.md（问题排查）
+├─ 用户说模型出问题了
+│  │
+│  │  关键词：看不到、不显示、白色、碎裂、崩溃、
+│  │         不动、没有动画、报错
+│  │
+│  └─ → 读取 skill-troubleshooting.md
+│
+└─ 遇到任何技术问题
+   └─ → 读取 skill-troubleshooting.md
 ```
 
 ---
 
 ## 快速判断表
 
-| 用户关键词 | 文件格式 | 路由到 |
-|-----------|---------|--------|
-| 角色、人物、NPC、怪物、玩家 | .glb | skill-animated-character.md |
-| 动画、Idle、Walk、Run、Attack、状态机 | .glb | skill-animated-character.md |
-| Meshy AI、Mixamo、骨骼动画 | .glb | skill-animated-character.md |
-| 雕像、摆件、道具、装饰品、花瓶 | .glb | skill-static-prop.md |
-| 地板、门、窗、墙、栏杆、桥 | .fbx / .glb | skill-scene-fbx.md |
-| 沙发、桌子、椅子、家具、建筑 | .fbx | skill-scene-fbx.md |
-| 看不到、不显示、白色、碎裂、崩溃 | 任何 | skill-troubleshooting.md |
+| 用户意图 | 关键词 | 路由到 | 格式无关 |
+|---------|--------|--------|---------|
+| 会动的角色 | 角色、人物、NPC、动画、Idle/Walk/Run | skill-animated-character.md | .glb .fbx 都走这里 |
+| 不动的物件 | 雕像、道具、摆件、装饰 | skill-static-prop.md | .glb 走这里 |
+| 场景搭建 | 家具、建筑、地板、门窗、房间 | skill-scene-fbx.md（FBX）或 skill-static-prop.md（GLB） | 按格式选子文档 |
+| 出了问题 | 不显示、碎裂、白色、崩溃、不动 | skill-troubleshooting.md | 任何格式 |
 
 ---
 
 ## 子文档一览
 
-| 文档 | 用途 | 复杂度 |
-|------|------|--------|
-| **skill-static-prop.md** | GLB 静态物件（雕像、道具、装饰） | 简单 |
-| **skill-animated-character.md** | GLB 骨骼动画角色（需要转换+状态机） | 复杂 |
-| **skill-scene-fbx.md** | FBX 场景素材（家具、建筑，直接加载） | 最简单 |
-| **skill-troubleshooting.md** | 问题排查（不可见、碎裂、白膜、动画不播放） | 按需 |
+| 文档 | 用途 | 支持格式 | 复杂度 |
+|------|------|---------|--------|
+| **skill-animated-character.md** | 会动的角色（骨骼动画+状态机） | .glb / .fbx | 复杂 |
+| **skill-static-prop.md** | 不动的 GLB 物件（雕像、道具） | .glb | 中等 |
+| **skill-scene-fbx.md** | 不动的 FBX 场景素材（家具、建筑） | .fbx | 最简单 |
+| **skill-troubleshooting.md** | 问题排查（不可见、碎裂、白膜等） | 任何 | 按需 |
 
 ---
 
